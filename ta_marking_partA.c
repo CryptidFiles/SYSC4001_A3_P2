@@ -127,29 +127,28 @@ void check_rubric(shared_data_t *shared_data, int ta_id) {
 void mark_questions(shared_data_t *shared_data, int ta_id) {
     printf("TA %d: Starting to mark exam for student %d\n", ta_id, shared_data->current_student_id);
     
-    int questions_to_mark = RUBRIC_SIZE;
-    
-    while (questions_to_mark > 0) {
-        // Find a question to mark (simple approach - race conditions expected)
-        for (int i = 0; i < RUBRIC_SIZE; i++) {
-            if (shared_data->questions_marked[i] == 0) {
-                // Mark this question (race condition: multiple TAs might pick same question)
-                printf("TA %d: Marking question %d for student %d\n", 
-                       ta_id, i + 1, shared_data->current_student_id);
-                
-                // Marking takes 1.0-2.0 seconds using usleep
-                usleep(1000000 + (rand() % 1000001));  // 1,000,000 to 2,000,000 microseconds
-                
-                // Mark as completed (race condition: might overwrite other TA's work)
-                shared_data->questions_marked[i] = 1;
-                questions_to_mark--;
-                
-                printf("TA %d: Finished marking question %d for student %d\n", 
-                       ta_id, i + 1, shared_data->current_student_id);
-                break;
-            }
-        }
+    // Find a question to mark (simple approach - race conditions expected)
+    for (int i = 0; i < RUBRIC_SIZE; i++) {
         
+        
+        if (shared_data->questions_marked[i] == 0) {
+            // Mark this question (race condition: multiple TAs might pick same question)
+            printf("TA %d: Marking question %d for student %d\n", 
+                ta_id, i + 1, shared_data->current_student_id);
+            
+            // Marking takes 1.0-2.0 seconds using usleep
+            usleep(1000000 + (rand() % 1000001));  // 1,000,000 to 2,000,000 microseconds
+            
+            // Mark as completed (race condition: might overwrite other TA's work)
+            shared_data->questions_marked[i] = 1;
+            //questions_to_mark--;
+            
+            printf("TA %d: Finished marking question %d for student %d\n", 
+                ta_id, i + 1, shared_data->current_student_id);
+            
+            break;
+        }
+
         usleep(100000);  // 0.1 seconds = 100,000 microseconds
     }
 

@@ -118,12 +118,12 @@ void check_rubric(shared_data_t *shared_data, int ta_id, int semid) {
     printf("TA %d: Checking rubric...\n", ta_id);
     
     for (int i = 0; i < RUBRIC_SIZE; i++) {
-        // Random delay between 0.5-1.0 seconds using usleep
-        long delay_us = 500000 + (rand() % 500001);  // 500,000 to 1,000,000 microseconds
-        usleep(delay_us);
-        
-        // Calculate thinking time in seconds for output
-        double think_time = delay_us / 1000000.0;
+        // Random delay between 0.5-1.0 seconds using sleep
+        double delay_seconds = 0.5 + (rand() % 501) / 1000.0;  // 0.5 to 1.0 seconds
+        sleep(delay_seconds);  // Use sleep instead of usleep
+
+        // Calculate thinking time in seconds for output (already have it!)
+        double think_time = delay_seconds;
         
         // Random decision to correct (30% chance fixed)
         int should_correct = (rand() % 100 < 30);
@@ -159,7 +159,13 @@ void check_rubric(shared_data_t *shared_data, int ta_id, int semid) {
 
 // Function to mark questions with synchronization 
 void mark_questions(shared_data_t *shared_data, int ta_id, int semid) {
-    printf("TA %d: Starting to mark exam for student %d\n", ta_id, shared_data->current_student_id);
+    
+    // CAPTURE student ID at start
+    sem_wait(semid, SEM_SHARED);
+    int captured_student_id = shared_data->current_student_id;  // Save it!
+    sem_signal(semid, SEM_SHARED);
+
+    printf("TA %d: Starting to mark exam for student %d\n", ta_id, captured_student_id);
     
     int marked_any = 0;
     
@@ -183,25 +189,26 @@ void mark_questions(shared_data_t *shared_data, int ta_id, int semid) {
             // No more questions to mark
             if (!marked_any) {
                 printf("TA %d: No questions available to mark for student %d\n", 
-                       ta_id, shared_data->current_student_id);
+                       ta_id, captured_student_id);
             }
             break;
         }
         
         // Mark the question
         printf("TA %d: Marking question %d for student %d\n", 
-               ta_id, question_to_mark + 1, shared_data->current_student_id);
+               ta_id, question_to_mark + 1, captured_student_id);  // Use captured ID
         
-        usleep(1000000 + (rand() % 1000001));  // 1.0-2.0 seconds
+        //usleep(1000000 + (rand() % 1000001));  // 1.0-2.0 seconds for marking
+        sleep(1 + rand() % 2);
         
         printf("TA %d: Finished marking question %d for student %d\n", 
-               ta_id, question_to_mark + 1, shared_data->current_student_id);
+               ta_id, question_to_mark + 1, captured_student_id);  // Use captured ID
         
         usleep(100000);  // Small delay
     }
     
     if (marked_any) {
-        printf("TA %d: Completed marking questions for student %d\n", ta_id, shared_data->current_student_id);
+        printf("TA %d: Completed marking questions for student %d\n", ta_id, captured_student_id);
     }
 }
 
@@ -271,6 +278,11 @@ void ta_process(shared_data_t *shared_data, int ta_id, int semid) {
         }
         sem_signal(semid, SEM_SHARED); // release lock for actual work
 
+        // Check conditions AFTER releasing lock
+        if (shared_data->exams_finished || shared_data->current_student_id == 9999) {
+            break;
+        }
+
 
         // Check rubric
         printf("TA %d: [DEBUG] About to check rubric\n", ta_id);
@@ -312,7 +324,7 @@ int main(int argc, char *argv[]) {
     
     // Initialize semaphores
     union semun arg;
-    unsigned short values[NUM_SEMAPHORES] = {1, 1, 1, 1};  // All binary semaphores
+    unsigned short values[NUM_SEMAPHORES] = {1, 1, 1};  // All binary semaphores
     arg.array = values;
     if (semctl(semid, 0, SETALL, arg) == -1) {
         perror("semctl SETALL failed");

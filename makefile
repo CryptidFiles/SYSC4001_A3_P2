@@ -1,18 +1,44 @@
 CC = gcc
 CFLAGS = -Wall -Wextra -std=c99
-TARGET = ta_marking_partA
-SOURCES = ta_marking_partA.c
 
-all: $(TARGET)
+# Targets
+TARGET_A = ta_marking_partA
+TARGET_B = ta_marking_partB
 
-$(TARGET): $(SOURCES)
-	$(CC) $(CFLAGS) -o $(TARGET) $(SOURCES)
+# Sources
+SOURCES_A = ta_marking_partA.c
+SOURCES_B = ta_marking_partB.c
 
+# Default target
+all: $(TARGET_A) $(TARGET_B)
+
+# Part A target
+$(TARGET_A): $(SOURCES_A)
+	$(CC) $(CFLAGS) -o $(TARGET_A) $(SOURCES_A)
+
+# Part B target  
+$(TARGET_B): $(SOURCES_B)
+	$(CC) $(CFLAGS) -o $(TARGET_B) $(SOURCES_B)
+
+# Individual build targets
+partA: $(TARGET_A)
+
+partB: $(TARGET_B)
+
+# Create exam files
 create_exams:
 	chmod +x create_exams.sh
 	./create_exams.sh
 
-clean:
-	rm -f $(TARGET) exam_*.txt
+# Run targets (shortcut if I want to test defined number of TAs
+run-partA: $(TARGET_A)
+	./$(TARGET_A) 3
 
-.PHONY: all create_exams clean
+run-partB: $(TARGET_B)
+	./$(TARGET_B) 2
+
+# Clean all
+clean:
+	rm -f $(TARGET_A) $(TARGET_B) exam_*.txt
+
+.PHONY: all partA partB create_exams run-partA run-partB clean

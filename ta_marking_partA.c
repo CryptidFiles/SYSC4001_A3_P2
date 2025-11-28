@@ -102,33 +102,26 @@ void check_rubric(shared_data_t *shared_data, int ta_id) {
         int should_correct = (rand() % 100 < 30);
         
         if (should_correct) {
-            // Correction needed
             char *comma_pos = strchr(shared_data->rubric[i], ',');
-            //printf(*(comma_pos + 2));
             if (comma_pos != NULL && *(comma_pos + 2) != '\0') {
                 char current_char = *(comma_pos + 2);
                 
-                // Use modulus to wrap from Z back to A
                 char new_char;
                 if (current_char >= 'A' && current_char <= 'Z') {
-                    // Wrap around using modulus: A=65, Z=90
                     new_char = 'A' + ((current_char - 'A' + 1) % 26);
                 } else {
-                    // Fallback if character is outside A-Z range
                     new_char = current_char + 1;
                 }
                 *(comma_pos + 2) = new_char;
                 
-                //printf("TA %d:  Q%d: Thinks for %.1fs → Corrects! %c→%c\n", ta_id, i + 1, think_time, current_char, new_char);
-                printf("TA %d: thinks for %.1fs on Q%d → Needs Correction: %c→%c\n", ta_id, think_time, i+1, current_char, new_char);
+                printf("TA %d: thinks for %.2fs on Q%d → Needs Correction: %c→%c\n",
+                       ta_id, think_time, i+1, current_char, new_char);
 
-                // Save the updated rubric
                 save_rubric(shared_data);
             }
         } else {
-            // No correction
-                printf("TA %d: thinks for %.1fs on Q%d → No Need for Correction (%d%% chance)\n", ta_id, think_time, i+1, 70);
-
+            printf("TA %d: thinks for %.2fs on Q%d → No Need for Correction\n",
+                   ta_id, think_time, i+1);
         }
     }
 }
@@ -139,10 +132,11 @@ void mark_questions(shared_data_t *shared_data, int ta_id) {
     
     // Find a question to mark (simple approach - race conditions expected)
     for (int i = 0; i < RUBRIC_SIZE; i++) {
-        
-        
         if (shared_data->questions_marked[i] == 0) {
-            // Mark this question (race condition: multiple TAs might pick same question)
+            // Time the marking operation
+            struct timespec mark_start, mark_end;
+            clock_gettime(CLOCK_MONOTONIC, &mark_start);
+
             printf("TA %d: Marking question %d for student %d\n", 
                 ta_id, i + 1, shared_data->current_student_id);
             
@@ -151,10 +145,14 @@ void mark_questions(shared_data_t *shared_data, int ta_id) {
             
             // Mark as completed (race condition: might overwrite other TA's work)
             shared_data->questions_marked[i] = 1;
-            //questions_to_mark--;
             
-            printf("TA %d: Finished marking question %d for student %d\n", 
-                ta_id, i + 1, shared_data->current_student_id);
+            clock_gettime(CLOCK_MONOTONIC, &mark_end);
+            double mark_time =
+                (mark_end.tv_sec - mark_start.tv_sec) +
+                (mark_end.tv_nsec - mark_start.tv_nsec) / 1000000000.0;
+
+            printf("TA %d: Finished marking question %d for student %d (Marking Time: %.2f seconds)\n", 
+                ta_id, i + 1, shared_data->current_student_id, mark_time);
             
             break;
         }
@@ -162,11 +160,12 @@ void mark_questions(shared_data_t *shared_data, int ta_id) {
         usleep(100000);  // 0.1 seconds = 100,000 microseconds
     }
 
-    printf("TA %d: Completed marking all questions for student %d\n", ta_id, shared_data->current_student_id);
+    printf("TA %d: Completed marking all questions for student %d\n",
+           ta_id, shared_data->current_student_id);
 }
 
 // TA process function
-void ta_process(shared_data_t *shared_data, int ta_id) {  // Removed unused num_tas parameter
+void ta_process(shared_data_t *shared_data, int ta_id) {
     srand(time(NULL) + ta_id); // Different seed for each TA
     
     while (1) {
@@ -231,6 +230,10 @@ int main(int argc, char *argv[]) {
     
     printf("Starting marking system with %d TAs\n", num_tas);
     printf("NOTE: Race conditions are expected in Part A - this is normal behavior\n");
+
+    // Program timing start
+    struct timespec program_start, program_end;
+    clock_gettime(CLOCK_MONOTONIC, &program_start);
     
     // Create shared memory
     key_t key = 1234;
@@ -281,6 +284,16 @@ int main(int argc, char *argv[]) {
     // Cleanup
     shmdt(shared_data);
     shmctl(shmid, IPC_RMID, NULL);
+
+    // Program timing end
+    clock_gettime(CLOCK_MONOTONIC, &program_end);
+    double total_time =
+        (program_end.tv_sec - program_start.tv_sec) +
+        (program_end.tv_nsec - program_start.tv_nsec) / 1000000000.0;
+
+    printf("\n=====================================\n");
+    printf("PART A TOTAL EXECUTION TIME: %.2f seconds\n", total_time);
+    printf("=====================================\n");
     
     printf("All TAs have finished marking. Program completed.\n");
     return 0;

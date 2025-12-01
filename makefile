@@ -2,12 +2,12 @@ CC = gcc
 CFLAGS = -Wall -Wextra -std=c99
 
 # Targets
-TARGET_A = ta_marking_partA
-TARGET_B = ta_marking_partB
+TARGET_A = ta_partA
+TARGET_B = ta_partB
 
 # Sources
-SOURCES_A = ta_marking_partA.c
-SOURCES_B = ta_marking_partB.c
+SOURCES_A = ta_marking_partA_101299776_101287534.c
+SOURCES_B = ta_marking_partB_101299776_101287534.c
 
 # Default target
 all: $(TARGET_A) $(TARGET_B)
@@ -30,12 +30,12 @@ create_exams:
 	chmod +x create_exams.sh
 	./create_exams.sh
 
-# Run targets (shortcut if I want to test defined number of TAs
+# Run targets (for testing, you can run the file with n >= 2 TAs if you want)
 run-partA: $(TARGET_A)
 	./$(TARGET_A) 3
 
 run-partB: $(TARGET_B)
-	./$(TARGET_B) 2
+	./$(TARGET_B) 4
 
 # Clean all
 clean:
